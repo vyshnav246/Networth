@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Net worth analysis</title>
+<style>
+:root {
+  --paper: #F2F4F0;
+  --card: #FBFCFA;
+  --ink: #1B2722;
+  --muted: #66736B;
+  --line: #D6DDD6;
+  --accent: #2E5E4E;
+  --accent-soft: #CFE3DA;
+  --warn: #9A4A1F;
+  --warn-soft: #F3DFD0;
+  --neg: #8E2C2C;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111815;
+    --card: #17201C;
+    --ink: #E4EDE8;
+    --muted: #94A39B;
+    --line: #2A3732;
+    --accent: #8CC7B2;
+    --accent-soft: #22362E;
+    --warn: #E0A27C;
+    --warn-soft: #3A2A20;
+    --neg: #E88B8B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111815; --card: #17201C; --ink: #E4EDE8; --muted: #94A39B;
+  --line: #2A3732; --accent: #8CC7B2; --accent-soft: #22362E;
+  --warn: #E0A27C; --warn-soft: #3A2A20; --neg: #E88B8B; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size: 16px; line-height: 1.5;
+  padding: env(safe-area-inset-top, 0px) 16px env(safe-area-inset-bottom, 0px);
+}
+main { max-width: 880px; margin: 0 auto; padding: 32px 0 48px; }
+h1 { font-size: 2rem; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 1.15rem; font-weight: 600; margin: 0 0 12px; }
+.sub { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+.num { font-variant-numeric: tabular-nums; }
+.hero {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 4px; padding: 28px; margin-bottom: 24px;
+}
+.hero .label { color: var(--muted); font-size: .95rem; }
+.hero .big { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 600; margin: 4px 0 16px; }
+.hero .big.neg { color: var(--neg); }
+.split {
+  display: flex; height: 14px; border-radius: 2px; overflow: hidden;
+  background: var(--line); margin-bottom: 8px;
+}
+.split span { display: block; height: 100%; transition: width .3s ease; }
+.split .a { background: var(--accent); }
+.split .l { background: var(--warn); }
+.legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: .92rem; color: var(--muted); }
+.legend b { color: var(--ink); font-weight: 600; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 4px; padding: 20px;
+}
+.row {
+  display: grid; grid-template-columns: 1fr 150px; gap: 12px;
+  align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line);
+}
+.row:last-of-type { border-bottom: 0; }
+.row label { font-size: .98rem; }
+.row input {
+  width: 100%; font: inherit; font-variant-numeric: tabular-nums;
+  text-align: right; padding: 7px 10px; background: var(--paper);
+  color: var(--ink); border: 1px solid var(--line); border-radius: 3px;
+}
+.row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.subtotal {
+  display: flex; justify-content: space-between; margin-top: 12px;
+  padding-top: 10px; border-top: 1px solid var(--ink); font-weight: 600;
+}
+.metric { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px dashed var(--line); gap: 12px; }
+.metric:last-child { border-bottom: 0; }
+.metric .hint { color: var(--muted); font-size: .85rem; }
+.metric .val { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.flags { margin-top: 24px; }
+.flag {
+  background: var(--warn-soft); color: var(--ink);
+  border-left: 3px solid var(--warn); padding: 10px 14px; margin-bottom: 10px;
+  border-radius: 2px;
+}
+.ok { background: var(--accent-soft); border-left-color: var(--accent); }
+.flag p { margin: 0; }
+.none { color: var(--muted); font-style: italic; }
+.note { color: var(--muted); font-size: .85rem; margin-top: 24px; }
+button {
+  font: inherit; font-size: .9rem; background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 3px; padding: 6px 12px; cursor: pointer;
+}
+button:hover { color: var(--ink); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) { .split span { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <h1>Net worth analysis</h1>
+      <p class="sub">Enter current values in ₹. Figures save automatically in this browser. No sign-in needed.</p>
+      <p class="note" id="status" style="margin:0" aria-live="polite">Checking saved figures…</p>
+    </div>
+    <button id="reset" type="button">Clear all</button>
+  </div>
+
+  <section class="hero" aria-live="polite">
+    <div class="label">Net worth</div>
+    <div class="big num" id="netWorth">₹0</div>
+    <div class="split" role="img" aria-label="Assets versus liabilities">
+      <span class="a" id="barA" style="width:0%"></span>
+      <span class="l" id="barL" style="width:0%"></span>
+    </div>
+    <div class="legend">
+      <span>Assets <b class="num" id="totA">₹0</b></span>
+      <span>Liabilities <b class="num" id="totL">₹0</b></span>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Assets</h2>
+      <div id="assetRows"></div>
+      <div class="subtotal"><span>Total assets</span><span class="num" id="subA">₹0</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Liabilities</h2>
+      <div id="liabRows"></div>
+      <div class="subtotal"><span>Total liabilities</span><span class="num" id="subL">₹0</span></div>
+    </section>
+  </div>
+
+  <div class="grid" style="margin-top:24px">
+    <section class="card">
+      <h2>Monthly cash flow <span style="font-weight:400;color:var(--muted)">(optional)</span></h2>
+      <div class="row"><label for="inc">Take-home income</label><input id="inc" type="number" min="0" inputmode="decimal" placeholder="0"></div>
+      <div class="row"><label for="exp">Monthly expenses incl. EMIs</label><input id="exp" type="number" min="0" inputmode="decimal" placeholder="0"></div>
+      <div class="row"><label for="emi">of which: EMIs and loan payments</label><input id="emi" type="number" min="0" inputmode="decimal" placeholder="0"></div>
+    </section>
+
+    <section class="card">
+      <h2>Key ratios</h2>
+      <div class="metric"><div>Debt-to-asset<div class="hint">Liabilities ÷ assets. Under 30% is comfortable.</div></div><div class="val" id="r_da">–</div></div>
+      <div class="metric"><div>Liquidity runway<div class="hint">Cash and liquid funds ÷ monthly expenses.</div></div><div class="val" id="r_rw">–</div></div>
+      <div class="metric"><div>Savings rate<div class="hint">(Income − expenses) ÷ income.</div></div><div class="val" id="r_sr">–</div></div>
+      <div class="metric"><div>EMI burden<div class="hint">Loan payments ÷ take-home income. Above 40% is stretched.</div></div><div class="val" id="r_emi">–</div></div>
+    </section>
+  </div>
+
+  <section class="flags card" style="margin-top:24px">
+    <h2>What this says</h2>
+    <div id="flags"></div>
+  </section>
+
+  <p class="note">Liquid assets for the runway calculation are cash, savings and fixed deposits. Liquid assets exclude retirement and gold. Rates are rules of thumb for a personal balance sheet, not advice.</p>
+</main>
+
+<script>
+const ASSETS = [
+  { id: "cash", name: "Cash and savings accounts", liquid: true },
+  { id: "fd", name: "Fixed and recurring deposits", liquid: true },
+  { id: "equity", name: "Equity mutual funds", liquid: false, risk: true },
+  { id: "stocks", name: "Direct stocks", liquid: false, risk: true },
+  { id: "crypto", name: "Crypto", liquid: false, risk: true },
+  { id: "retire", name: "EPF, PPF, NPS and retirement", liquid: false },
+  { id: "gold", name: "Gold", liquid: false },
+  { id: "re", name: "Real estate (current market value)", liquid: false },
+  { id: "other", name: "Other assets", liquid: false }
+];
+const LIABS = [
+  { id: "home", name: "Home loan outstanding" },
+  { id: "car", name: "Car loan outstanding" },
+  { id: "edu", name: "Educational loan outstanding" },
+  { id: "personal", name: "Personal loan outstanding" },
+  { id: "cc", name: "Credit card balance" },
+  { id: "othl", name: "Other debts" }
+];
+
+const fmt = n => "₹" + Math.round(n).toLocaleString("en-IN");
+const pct = x => (isFinite(x) ? (x * 100).toFixed(1) + "%" : "–");
+const val = id => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) && v > 0 ? v : 0; };
+
+function buildRows(list, containerId, prefix) {
+  const box = document.getElementById(containerId);
+  list.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "row";
+    const lab = document.createElement("label");
+    lab.htmlFor = prefix + item.id;
+    lab.textContent = item.name;
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.min = "0"; inp.inputMode = "decimal";
+    inp.id = prefix + item.id; inp.placeholder = "0";
+    inp.addEventListener("input", update);
+    row.append(lab, inp);
+    box.appendChild(row);
+  });
+}
+buildRows(ASSETS, "assetRows", "a_");
+buildRows(LIABS, "liabRows", "l_");
+["inc", "exp", "emi"].forEach(id => document.getElementById(id).addEventListener("input", update));
+
+function update() {
+  scheduleSave();
+  const assets = ASSETS.map(a => ({ ...a, v: val("a_" + a.id) }));
+  const liabs = LIABS.map(l => ({ ...l, v: val("l_" + l.id) }));
+  const totA = assets.reduce((s, a) => s + a.v, 0);
+  const totL = liabs.reduce((s, l) => s + l.v, 0);
+  const nw = totA - totL;
+  const liquid = assets.filter(a => a.liquid).reduce((s, a) => s + a.v, 0);
+  const inc = val("inc"), exp = val("exp"), emi = val("emi");
+
+  const nwEl = document.getElementById("netWorth");
+  nwEl.textContent = fmt(nw);
+  nwEl.classList.toggle("neg", nw < 0);
+  document.getElementById("totA").textContent = fmt(totA);
+  document.getElementById("totL").textContent = fmt(totL);
+  document.getElementById("subA").textContent = fmt(totA);
+  document.getElementById("subL").textContent = fmt(totL);
+  const gross = totA + totL;
+  document.getElementById("barA").style.width = gross ? (totA / gross * 100) + "%" : "0%";
+  document.getElementById("barL").style.width = gross ? (totL / gross * 100) + "%" : "0%";
+
+  const da = totA ? totL / totA : NaN;
+  const rw = exp ? liquid / exp : NaN;
+  const sr = inc ? (inc - exp) / inc : NaN;
+  const er = inc ? emi / inc : NaN;
+  document.getElementById("r_da").textContent = totA ? pct(da) : "–";
+  document.getElementById("r_rw").textContent = exp && liquid ? (rw).toFixed(1) + " months" : "–";
+  document.getElementById("r_sr").textContent = inc ? pct(sr) : "–";
+  document.getElementById("r_emi").textContent = inc && emi ? pct(er) : "–";
+
+  const flags = [];
+  const flag = (text, ok) => flags.push({ text, ok });
+  if (totA + totL === 0) {
+    document.getElementById("flags").innerHTML = '<p class="none">Enter a few values above to see what they say.</p>';
+    return;
+  }
+  if (nw < 0) flag("Liabilities exceed assets. Net worth is negative, so the first priority is reducing the most expensive debt, usually credit cards and personal loans.");
+  else if (nw > 0) flag("Net worth is positive. The question now is whether the mix of assets matches your time horizon and liquidity needs.", true);
+
+  if (totA && da > 0.5) flag(`Debt is ${pct(da)} of assets. Above 50%, a sharp drop in asset values or income would hurt quickly.`);
+  else if (totA && da <= 0.3 && totL > 0) flag(`Debt is ${pct(da)} of assets, which is comfortable.`, true);
+
+  if (exp && liquid >= 0) {
+    if (rw < 3) flag(`Liquid funds cover ${rw.toFixed(1)} months of expenses. Below 3 months, a job loss or medical bill forces you to sell investments or borrow.`);
+    else if (rw >= 6) flag(`Liquid funds cover ${rw.toFixed(1)} months of expenses, which is a solid buffer.`, true);
+  }
+
+  if (inc && emi / inc > 0.4) flag(`EMIs take ${pct(er)} of take-home income. Above 40%, there is little room for shocks or new borrowing.`);
+
+  if (inc && exp) {
+    if (sr < 0) flag(`Expenses exceed income by ${fmt(exp - inc)} a month. This is the most urgent number on this page.`);
+    else if (sr < 0.2) flag(`You save ${pct(sr)} of income. Under 20% usually means wealth grows slowly no matter what the portfolio does.`);
+    else flag(`You save ${pct(sr)} of income, which is a strong base for building net worth.`, true);
+  }
+
+  if (totA) {
+    const risky = assets.filter(a => a.risk).reduce((s, a) => s + a.v, 0);
+    const share = risky / totA;
+    if (share > 0.5) flag(`${pct(share)} of assets sit in equity, stocks and crypto. A 30% market fall would cut your net worth by roughly ${fmt(risky * 0.3)}.`);
+    const crypto = assets.find(a => a.id === "crypto").v;
+    if (crypto / totA > 0.15) flag(`Crypto is ${pct(crypto / totA)} of assets. Position sizes this large deserve a deliberate limit.`);
+  }
+
+  if (totA) {
+    const re = assets.find(a => a.id === "re").v;
+    if (re / totA > 0.6) flag(`Real estate is ${pct(re / totA)} of assets. It is illiquid, so most of your wealth cannot be used quickly.`);
+  }
+
+  const box = document.getElementById("flags");
+  box.innerHTML = flags.length
+    ? flags.map(f => `<div class="flag ${f.ok ? "ok" : ""}"><p>${f.text}</p></div>`).join("")
+    : '<p class="none">Nothing stands out yet. Add cash flow figures for a fuller read.</p>';
+}
+
+document.getElementById("reset").addEventListener("click", () => {
+  document.querySelectorAll("input[type=number]").forEach(i => i.value = "");
+  update();
+});
+
+
+const KEY = "networthAnalysis.v1";
+let saveTimer = null, ready = false;
+const statusEl = document.getElementById("status");
+const setStatus = t => { statusEl.textContent = t; };
+function collect() {
+  const o = { assets: {}, liabs: {}, cash: {} };
+  ASSETS.forEach(a => o.assets[a.id] = document.getElementById("a_" + a.id).value);
+  LIABS.forEach(l => o.liabs[l.id] = document.getElementById("l_" + l.id).value);
+  ["inc", "exp", "emi"].forEach(k => o.cash[k] = document.getElementById(k).value);
+  return o;
+}
+function scheduleSave() {
+  if (!ready) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ ...collect(), updatedAt: new Date().toISOString() }));
+      setStatus("Saved in this browser at " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+    } catch (e) {
+      setStatus("Could not save in this browser. Your figures are still on screen.");
+    }
+  }, 500);
+}
+function fill(o) {
+  Object.entries(o.assets || {}).forEach(([k, v]) => { const el = document.getElementById("a_" + k); if (el) el.value = v; });
+  Object.entries(o.liabs || {}).forEach(([k, v]) => { const el = document.getElementById("l_" + k); if (el) el.value = v; });
+  Object.entries(o.cash || {}).forEach(([k, v]) => { const el = document.getElementById(k); if (el) el.value = v; });
+}
+function boot() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { fill(JSON.parse(raw)); setStatus("Loaded your saved figures from this browser."); }
+    else setStatus("Nothing saved yet. Figures save in this browser as you type.");
+  } catch (e) {
+    setStatus("Saving is unavailable in this browser, so figures will not be kept.");
+  }
+  ready = true;
+  update();
+}
+boot();
+</script>
+</body>
+</html>
